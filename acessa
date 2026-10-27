@@ -1,0 +1,277 @@
+
+import streamlit as st
+
+st.set_page_config(
+    page_title="Acessa++",
+    page_icon="♿",
+    layout="wide"
+)
+
+# Dados demonstrativos dos estabelecimentos
+if "locais" not in st.session_state:
+    st.session_state.locais = [
+        {
+            "nome": "Biblioteca Municipal",
+            "cidade": "Telêmaco Borba",
+            "categoria": "Educação",
+            "rampa": True,
+            "banheiro": True,
+            "piso_tatil": True,
+            "braile": False,
+            "descricao": "Biblioteca com entrada acessível."
+        },
+        {
+            "nome": "Restaurante Central",
+            "cidade": "Telêmaco Borba",
+            "categoria": "Alimentação",
+            "rampa": True,
+            "banheiro": False,
+            "piso_tatil": False,
+            "braile": False,
+            "descricao": "Restaurante no centro da cidade."
+        },
+        {
+            "nome": "Centro Cultural",
+            "cidade": "Curitiba",
+            "categoria": "Cultura",
+            "rampa": True,
+            "banheiro": True,
+            "piso_tatil": True,
+            "braile": True,
+            "descricao": "Espaço cultural acessível."
+        }
+    ]
+
+if "avaliacoes" not in st.session_state:
+    st.session_state.avaliacoes = {}
+
+st.title("♿ Acessa++")
+st.subheader("Acessibilidade para todos!")
+st.write(
+    "Encontre locais, consulte recursos de acessibilidade "
+    "e compartilhe sua experiência."
+)
+
+st.divider()
+
+# Menu de navegação
+pagina = st.sidebar.radio(
+    "Menu principal",
+    [
+        "Início",
+        "Pesquisar locais",
+        "Consultar acessibilidade",
+        "Avaliar estabelecimento",
+        "Cadastrar local"
+    ]
+)
+
+# 1. Página inicial
+if pagina == "Início":
+    st.header("Bem-vindo ao Acessa++")
+
+    st.write(
+        "O Acessa++ tem como objetivo facilitar a busca "
+        "por estabelecimentos com recursos de acessibilidade."
+    )
+
+    col1, col2, col3 = st.columns(3)
+
+    col1.metric("Locais cadastrados", len(st.session_state.locais))
+    col2.metric("Funcionalidades", 3)
+    col3.metric(
+        "Avaliações",
+        sum(len(v) for v in st.session_state.avaliacoes.values())
+    )
+
+    st.info(
+        "Escolha uma opção no menu lateral para começar."
+    )
+
+# 2. Pesquisar locais
+elif pagina == "Pesquisar locais":
+    st.header("🔎 Pesquisar locais")
+
+    busca = st.text_input("Nome do local")
+    cidade = st.text_input("Cidade")
+    categoria = st.selectbox(
+        "Categoria",
+        ["Todas", "Educação", "Alimentação", "Cultura", "Saúde", "Outros"]
+    )
+
+    resultados = []
+
+    for local in st.session_state.locais:
+        corresponde_nome = busca.lower() in local["nome"].lower()
+        corresponde_cidade = cidade.lower() in local["cidade"].lower()
+        corresponde_categoria = (
+            categoria == "Todas"
+            or categoria == local["categoria"]
+        )
+
+        if (
+            corresponde_nome
+            and corresponde_cidade
+            and corresponde_categoria
+        ):
+            resultados.append(local)
+
+    st.write(f"Resultados encontrados: {len(resultados)}")
+
+    if resultados:
+        for local in resultados:
+            with st.container(border=True):
+                st.subheader(local["nome"])
+                st.write(f"📍 Cidade: {local['cidade']}")
+                st.write(f"Categoria: {local['categoria']}")
+                st.write(local["descricao"])
+
+                recursos = []
+                if local["rampa"]:
+                    recursos.append("Rampa de acesso")
+                if local["banheiro"]:
+                    recursos.append("Banheiro acessível")
+                if local["piso_tatil"]:
+                    recursos.append("Piso tátil")
+                if local["braile"]:
+                    recursos.append("Informações em braile")
+
+                st.write(
+                    "Recursos informados: "
+                    + (", ".join(recursos) if recursos else "Nenhum informado")
+                )
+    else:
+        st.warning("Nenhum local encontrado.")
+
+# 3. Consultar acessibilidade
+elif pagina == "Consultar acessibilidade":
+    st.header("♿ Consultar recursos de acessibilidade")
+
+    nomes = [local["nome"] for local in st.session_state.locais]
+
+    if nomes:
+        nome_escolhido = st.selectbox("Escolha um estabelecimento", nomes)
+
+        local = next(
+            item for item in st.session_state.locais
+            if item["nome"] == nome_escolhido
+        )
+
+        st.subheader(local["nome"])
+        st.write(f"Cidade: {local['cidade']}")
+        st.write(f"Descrição: {local['descricao']}")
+
+        recursos = {
+            "Rampa de acesso": local["rampa"],
+            "Banheiro acessível": local["banheiro"],
+            "Piso tátil": local["piso_tatil"],
+            "Informações em braile": local["braile"]
+        }
+
+        for recurso, disponivel in recursos.items():
+            if disponivel:
+                st.success(f"✓ {recurso}: informado como disponível")
+            else:
+                st.warning(f"? {recurso}: não informado como disponível")
+
+        st.caption(
+            "Os dados são demonstrativos e dependem da atualização "
+            "dos cadastros. Confirme as condições com o estabelecimento."
+        )
+    else:
+        st.info("Ainda não há locais cadastrados.")
+
+# 4. Avaliar estabelecimento
+elif pagina == "Avaliar estabelecimento":
+    st.header("⭐ Avaliar estabelecimento")
+
+    nomes = [local["nome"] for local in st.session_state.locais]
+
+    if nomes:
+        escolhido = st.selectbox("Estabelecimento", nomes)
+
+        with st.form("form_avaliacao"):
+            nota = st.slider("Nota", 1, 5, 5)
+            comentario = st.text_area(
+                "Conte sua experiência",
+                placeholder="Como foi a acessibilidade do local?"
+            )
+            enviar = st.form_submit_button("Enviar avaliação")
+
+            if enviar:
+                if not comentario.strip():
+                    st.error("Escreva um comentário antes de enviar.")
+                else:
+                    if escolhido not in st.session_state.avaliacoes:
+                        st.session_state.avaliacoes[escolhido] = []
+
+                    st.session_state.avaliacoes[escolhido].append({
+                        "nota": nota,
+                        "comentario": comentario.strip()
+                    })
+
+                    st.success("Avaliação registrada nesta sessão!")
+
+        avaliacoes = st.session_state.avaliacoes.get(escolhido, [])
+
+        if avaliacoes:
+            st.subheader("Avaliações dos usuários")
+
+            media = sum(a["nota"] for a in avaliacoes) / len(avaliacoes)
+            st.metric("Nota média", f"{media:.1f} / 5")
+
+            for avaliacao in reversed(avaliacoes):
+                st.write("⭐" * avaliacao["nota"])
+                st.write(avaliacao["comentario"])
+                st.divider()
+        else:
+            st.info("Este estabelecimento ainda não recebeu avaliações.")
+    else:
+        st.info("Cadastre um local antes de avaliá-lo.")
+
+# 5. Cadastrar estabelecimento
+elif pagina == "Cadastrar local":
+    st.header("📍 Cadastrar novo estabelecimento")
+
+    with st.form("form_cadastro"):
+        nome = st.text_input("Nome do estabelecimento")
+        cidade = st.text_input("Cidade")
+        categoria = st.selectbox(
+            "Categoria",
+            ["Educação", "Alimentação", "Cultura", "Saúde", "Outros"]
+        )
+        descricao = st.text_area("Descrição do local")
+
+        st.subheader("Recursos de acessibilidade")
+        rampa = st.checkbox("Rampa de acesso")
+        banheiro = st.checkbox("Banheiro acessível")
+        piso_tatil = st.checkbox("Piso tátil")
+        braile = st.checkbox("Informações em braile")
+
+        cadastrar = st.form_submit_button("Cadastrar estabelecimento")
+
+        if cadastrar:
+            if not nome.strip() or not cidade.strip():
+                st.error("Preencha o nome e a cidade.")
+            elif any(
+                local["nome"].casefold() == nome.strip().casefold()
+                and local["cidade"].casefold() == cidade.strip().casefold()
+                for local in st.session_state.locais
+            ):
+                st.error("Este local já está cadastrado nessa cidade.")
+            else:
+                st.session_state.locais.append({
+                    "nome": nome.strip(),
+                    "cidade": cidade.strip(),
+                    "categoria": categoria,
+                    "rampa": rampa,
+                    "banheiro": banheiro,
+                    "piso_tatil": piso_tatil,
+                    "braile": braile,
+                    "descricao": descricao.strip()
+                })
+
+                st.success("Estabelecimento cadastrado com sucesso!")
+
+st.divider()
+st.caption("Acessa++ — Tecnologia e inclusão caminhando juntas.")
